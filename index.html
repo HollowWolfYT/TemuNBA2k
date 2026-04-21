@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NBA 2K Basketball</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a0a; color: #fff; overflow: hidden; }
+    #game-container { position: relative; width: 100vw; height: 100vh; }
+    #game-canvas { display: block; width: 100%; height: 100%; }
+    
+#loading-screen h1 {
+  font-size: 4rem;
+  font-weight: 900;
+  background: linear-gradient(180deg, #ff6b35, #f7931e);
+  -webkit-background-clip: text;
+  background-clip: text; /* <-- Just add this line! */
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 2rem;
+}
+    
+    /* Main Menu */
+    #main-menu { position: fixed; inset: 0; background: radial-gradient(circle at center, rgba(26,26,46,0.6) 0%, rgba(10,10,10,0.95) 100%); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 900; backdrop-filter: blur(3px); }
+    #main-menu.visible { display: flex; }
+    #main-menu h1 { font-size: 7rem; font-weight: 900; color: #ff6b35; margin-bottom: 0rem; text-shadow: 0 10px 30px rgba(255,107,53,0.6); letter-spacing: 4px; font-style: italic; animation: titlePulse 2s infinite alternate; }
+    @keyframes titlePulse { 0% { text-shadow: 0 10px 30px rgba(255, 107, 53, 0.6); transform: scale(1); } 100% { text-shadow: 0 10px 50px rgba(255, 107, 53, 1); transform: scale(1.03); } }
+    #main-menu .subtitle { font-size: 2rem; color: #fff; margin-bottom: 3rem; letter-spacing: 8px; text-transform: uppercase; font-weight: bold; opacity: 0.9; }
+    .menu-btn { padding: 1.2rem 3rem; font-size: 1.3rem; font-weight: 800; border: none; border-radius: 50px; cursor: pointer; margin: 0.5rem; min-width: 280px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); text-transform: uppercase; letter-spacing: 2px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+    .menu-btn.primary { background: linear-gradient(135deg, #ff6b35, #ff2222); color: #fff; border: 2px solid #ffaa88; }
+    .menu-btn.primary:hover { transform: scale(1.1) translateY(-5px); box-shadow: 0 15px 30px rgba(255,107,53,0.6); }
+    .menu-btn.secondary { background: rgba(0,0,0,0.6); color: #fff; border: 2px solid rgba(255,255,255,0.4); backdrop-filter: blur(5px); }
+    .menu-btn.secondary:hover { transform: scale(1.05) translateY(-3px); background: rgba(255,255,255,0.1); border-color: #fff; }
+    
+    /* HUD */
+    #hud { position: fixed; top: 0; left: 0; width: 100%; pointer-events: none; z-index: 100; display: none; }
+    #hud.visible { display: block; }
+    .scoreboard { display: flex; justify-content: center; padding: 15px; }
+    .scoreboard-inner { display: flex; background: rgba(0,0,0,0.9); border-radius: 8px; overflow: hidden; border: 2px solid #333; }
+    .team-score { display: flex; align-items: center; padding: 10px 25px; gap: 15px; }
+    .team-score.home { background: var(--home-color, #552583); }
+    .team-score.away { background: var(--away-color, #007A33); }
+    .team-abbr { font-weight: 700; font-size: 1.2rem; }
+    .score { font-size: 2.5rem; font-weight: 900; }
+    .game-info { display: flex; flex-direction: column; align-items: center; padding: 10px 30px; background: #111; min-width: 120px; }
+    .quarter { font-size: 0.9rem; color: #888; }
+    .game-clock { font-size: 1.8rem; font-weight: 700; font-family: monospace; }
+    
+    /* Shot Clock */
+    .shot-clock { position: fixed; top: 100px; right: 20px; width: 70px; height: 70px; background: rgba(0,0,0,0.9); border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 3px solid #ff6b35; z-index: 101; }
+    .shot-clock.warning { border-color: #ff0000; animation: pulse 0.5s infinite; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    .shot-clock-value { font-size: 2rem; font-weight: 900; color: #ff6b35; }
+    .shot-clock-label { font-size: 0.6rem; color: #888; }
+    
+    /* Shot Meter */
+    #shot-meter { position: fixed; bottom: 150px; left: 50%; transform: translateX(-50%); width: 200px; height: 20px; background: rgba(0,0,0,0.8); border-radius: 10px; overflow: hidden; display: none; border: 2px solid #fff; z-index: 200; }
+    #shot-meter.visible { display: block; }
+    .meter-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #ffff00, #ff0000); transition: width 0.05s linear; }
+    .meter-target { position: absolute; top: 0; width: 4px; height: 100%; background: #fff; left: 50%; }
+    
+    /* Stamina Bar */
+    .stamina-container { position: fixed; bottom: 20px; left: 20px; z-index: 101; }
+    .stamina-label { font-size: 0.8rem; color: #aaa; margin-bottom: 5px; }
+    .stamina-bar { width: 150px; height: 8px; background: rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; }
+    .stamina-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ff4444, #ffff00, #44ff44); transition: width 0.1s; }
+    
+    /* Controls */
+    .controls-hint { position: fixed; bottom: 60px; left: 20px; background: rgba(0,0,0,0.7); padding: 10px 15px; border-radius: 8px; font-size: 0.75rem; z-index: 101; }
+    .controls-hint kbd { background: #333; padding: 2px 6px; border-radius: 3px; margin-right: 5px; }
+    
+    /* Score Notification */
+    #score-notification { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 5rem; font-weight: 900; color: #ff6b35; text-shadow: 0 0 30px rgba(255, 107, 53, 0.5); display: none; z-index: 300; animation: scoreAnim 1s ease-out; }
+    #score-notification.visible { display: block; }
+    @keyframes scoreAnim { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+    
+    /* Pause Menu */
+    #pause-menu { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 600; }
+    #pause-menu.visible { display: flex; }
+    #pause-menu h2 { font-size: 3rem; margin-bottom: 2rem; color: #ff6b35; }
+
+    /* Cinematic Overlay */
+    #cinematic-bars { position: fixed; inset: 0; pointer-events: none; z-index: 50; display: flex; flex-direction: column; justify-content: space-between; opacity: 0; transition: opacity 0.5s; }
+    #cinematic-bars.visible { opacity: 1; }
+    .cinematic-bar { height: 12vh; background: #000; width: 100%; }
+  </style>
+  <script type="module" crossorigin src="/TemuNBA2k/assets/index-BfgcN0ex.js"></script>
+</head>
+<body>
+  <div id="game-container"><canvas id="game-canvas"></canvas></div>
+  <div id="loading-screen">
+    <h1>BASKETBALL</h1>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <p style="margin-top: 1rem; color: #666;">Loading...</p>
+  </div>
+  <div id="main-menu">
+    <h1>BASKETBALL</h1><p class="subtitle">3D Hoops Simulation</p>
+    <div style="margin-bottom: 24px; text-align: center; background: rgba(0,0,0,0.5); padding: 18px 30px; border-radius: 12px; min-width: 320px;">
+      <div style="font-size: 0.85rem; letter-spacing: 3px; color: #888; text-transform: uppercase; margin-bottom: 10px;">AI Difficulty</div>
+      <div style="display: flex; align-items: center; gap: 14px; justify-content: center;">
+        <span style="font-size: 0.8rem; color: #aaa; min-width: 56px; text-align: right;" id="diff-label-left">Rookie</span>
+        <input type="range" id="difficulty-slider" min="1" max="5" value="3" step="1"
+          style="width: 160px; accent-color: #ff6b35; cursor: pointer;">
+        <span style="font-size: 0.8rem; color: #aaa; min-width: 56px;" id="diff-label-right">HOF</span>
+      </div>
+      <div style="font-size: 1.3rem; font-weight: 900; color: #ff6b35; margin-top: 8px; letter-spacing: 2px;" id="diff-display">ALL-STAR</div>
+    </div>
+    <button class="menu-btn primary" id="quick-game-btn">Quick Game</button>
+    <button class="menu-btn secondary" id="exhibition-btn">Exhibition</button>
+  </div>
+  <div id="hud">
+    <div class="scoreboard">
+      <div class="scoreboard-inner">
+        <div class="team-score home"><span class="team-abbr" id="home-abbr">HOME</span><span class="score" id="home-score">0</span></div>
+        <div class="game-info"><span class="quarter" id="quarter-display">1ST QTR</span><span class="game-clock" id="game-clock">12:00</span></div>
+        <div class="team-score away"><span class="score" id="away-score">0</span><span class="team-abbr" id="away-abbr">AWAY</span></div>
+      </div>
+    </div>
+    <div class="shot-clock" id="shot-clock"><span class="shot-clock-value" id="shot-clock-value">24</span><span class="shot-clock-label">SHOT</span></div>
+    <div class="stamina-container">
+      <div class="stamina-label">ENERGY</div><div class="stamina-bar"><div class="stamina-fill" id="stamina-fill"></div></div>
+    </div>
+    <div class="controls-hint">
+      <div><kbd>WASD</kbd> Move</div><div><kbd>SHIFT</kbd> Sprint</div><div><kbd>SPACE</kbd> Shoot / Block</div>
+      <div><kbd>E</kbd> Pass</div><div><kbd>Q</kbd> Alley-oop</div><div><kbd>F</kbd> Steal</div>
+      <div><kbd>TAB</kbd> Switch Player</div>
+    </div>
+  </div>
+  <div id="shot-meter"><div class="meter-fill" id="meter-fill"></div><div class="meter-target"></div></div>
+  <div id="score-notification"></div>
+  <div id="pause-menu">
+    <h2>PAUSED</h2><button class="menu-btn primary" id="resume-btn">Resume</button><button class="menu-btn secondary" id="quit-btn">Quit to Menu</button>
+  </div>
+  <div id="cinematic-bars">
+    <div class="cinematic-bar"></div>
+    <div class="cinematic-bar"></div>
+  </div>
+</body>
+</html>
